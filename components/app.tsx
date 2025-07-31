@@ -43,16 +43,17 @@ export default function App() {
         // Create a peer connection
         const pc = new RTCPeerConnection();
 
+        // 注释掉音频播放设置，因为我们不需要AI的语音回复
         // Set up to play remote audio from the model
-        if (!audioElement.current) {
-          audioElement.current = document.createElement("audio");
-        }
-        audioElement.current.autoplay = true;
-        pc.ontrack = (e) => {
-          if (audioElement.current) {
-            audioElement.current.srcObject = e.streams[0];
-          }
-        };
+        // if (!audioElement.current) {
+        //   audioElement.current = document.createElement("audio");
+        // }
+        // audioElement.current.autoplay = true;
+        // pc.ontrack = (e) => {
+        //   if (audioElement.current) {
+        //     audioElement.current.srcObject = e.streams[0];
+        //   }
+        // };
 
         const stream = await navigator.mediaDevices.getUserMedia({
           audio: true,
@@ -246,6 +247,17 @@ export default function App() {
           session: {
             tools: TOOLS,
             instructions: INSTRUCTIONS,
+            modalities: ["text"], // 禁用语音输出，只允许文本/工具调用
+            voice: "alloy", // 虽然设置了voice，但由于modalities只包含text，不会有语音输出
+            turn_detection: {
+              type: "server_vad",
+              threshold: 0.5,
+              prefix_padding_ms: 300,
+              silence_duration_ms: 500,
+            },
+            input_audio_transcription: {
+              model: "whisper-1"
+            }
           },
         };
         sendClientEvent(sessionUpdate);

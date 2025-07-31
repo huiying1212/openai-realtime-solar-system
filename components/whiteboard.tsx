@@ -27,13 +27,25 @@ const Whiteboard: React.FC<WhiteboardProps> = ({ toolCall }) => {
   useEffect(() => {
     if (!toolCall) return;
 
+    console.log("Received toolCall:", toolCall);
+    console.log("Arguments type:", typeof toolCall.arguments);
+    console.log("Arguments value:", toolCall.arguments);
+
     const { name, arguments: toolArgs } = toolCall;
     let args: any = {};
     
     try {
-      args = JSON.parse(toolArgs);
+      // Check if toolArgs is already an object or a string that needs parsing
+      if (typeof toolArgs === 'string') {
+        args = JSON.parse(toolArgs);
+      } else if (typeof toolArgs === 'object' && toolArgs !== null) {
+        args = toolArgs;
+      } else {
+        console.error("Invalid toolCall arguments format:", toolArgs);
+        return;
+      }
     } catch (error) {
-      console.error("Failed to parse toolCall arguments:", error);
+      console.error("Failed to parse toolCall arguments:", error, "Raw arguments:", toolArgs);
       return;
     }
 
@@ -91,11 +103,22 @@ const Whiteboard: React.FC<WhiteboardProps> = ({ toolCall }) => {
 
   const displayData = () => {
     try {
-      const { chart, title, text, data } = JSON.parse(toolCall.arguments);
+      let chartData;
+      // Check if toolCall.arguments is already an object or a string that needs parsing
+      if (typeof toolCall.arguments === 'string') {
+        chartData = JSON.parse(toolCall.arguments);
+      } else if (typeof toolCall.arguments === 'object' && toolCall.arguments !== null) {
+        chartData = toolCall.arguments;
+      } else {
+        console.error("Invalid chart data format:", toolCall.arguments);
+        return;
+      }
+      
+      const { chart, title, text, data } = chartData;
       const component = getComponent({ chart, title, text, data });
       setDisplayComponent(component || null);
     } catch (error) {
-      console.error("Failed to parse chart data:", error);
+      console.error("Failed to parse chart data:", error, "Raw arguments:", toolCall.arguments);
     }
   };
 
