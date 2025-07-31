@@ -18,6 +18,14 @@ export default function App() {
   const [isSessionStarted, setIsSessionStarted] = useState(false);
   const [isSessionActive, setIsSessionActive] = useState(false);
   const [isListening, setIsListening] = useState(false);
+  // 添加语音转录状态
+  const [transcriptions, setTranscriptions] = useState<Array<{
+    id: string;
+    text: string;
+    timestamp: number;
+    status: 'completed' | 'failed';
+  }>>([]);
+  const [currentTranscription, setCurrentTranscription] = useState<string>("");
 
   const [dataChannel, setDataChannel] = useState<RTCDataChannel | null>(null);
   const peerConnection = useRef<RTCPeerConnection | null>(null);
@@ -227,6 +235,45 @@ export default function App() {
       // Append new server events to the list
       dataChannel.addEventListener("message", (e) => {
         const event = JSON.parse(e.data);
+        
+        // 处理语音转录完成事件
+        if (event.type === "conversation.item.input_audio_transcription.completed") {
+          const transcription = {
+            id: event.item_id || crypto.randomUUID(),
+            text: event.transcript || "",
+            timestamp: Date.now(),
+            status: 'completed' as const
+          };
+          setTranscriptions(prev => [transcription, ...prev]);
+          setCurrentTranscription("");
+          console.log("Transcription completed:", event.transcript);
+        }
+        
+        // 处理语音转录失败事件
+        if (event.type === "conversation.item.input_audio_transcription.failed") {
+          const transcription = {
+            id: event.item_id || crypto.randomUUID(),
+            text: `转录失败: ${event.error?.message || '未知错误'}`,
+            timestamp: Date.now(),
+            status: 'failed' as const
+          };
+          setTranscriptions(prev => [transcription, ...prev]);
+          setCurrentTranscription("");
+          console.log("Transcription failed:", event.error);
+        }
+        
+        // 处理语音开始事件
+        if (event.type === "input_audio_buffer.speech_started") {
+          setCurrentTranscription("正在识别语音...");
+          console.log("Speech started");
+        }
+        
+        // 处理语音结束事件
+        if (event.type === "input_audio_buffer.speech_stopped") {
+          setCurrentTranscription("语音识别中...");
+          console.log("Speech stopped");
+        }
+
         if (event.type === "response.done") {
           const output = event.response.output[0];
           setLogs((prev) => [output, ...prev]);
@@ -288,7 +335,11 @@ export default function App() {
 
   return (
     <div className="relative size-full">
-      <Whiteboard toolCall={toolCall} />
+      <Whiteboard 
+        toolCall={toolCall} 
+        transcriptions={transcriptions}
+        currentTranscription={currentTranscription}
+      />
       <Controls
         handleConnectClick={handleConnectClick}
         handleMicToggleClick={handleMicToggleClick}
