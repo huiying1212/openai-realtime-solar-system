@@ -1,7 +1,7 @@
 "use client";
 
 import Controls from "@/components/controls";
-import Scene from "@/components/scene";
+import Whiteboard from "@/components/whiteboard";
 import Logs from "@/components/logs";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { INSTRUCTIONS, TOOLS } from "@/lib/config";
@@ -205,15 +205,6 @@ export default function App() {
         response: `Tool call ${toolCall.name} executed successfully.`,
       };
 
-      // Handle special tool calls
-      if (toolCall.name === "get_iss_position") {
-        const issPosition = await fetch("/api/iss").then((response) =>
-          response.json()
-        );
-        console.log("ISS position:", issPosition);
-        toolCallOutput.issPosition = issPosition;
-      }
-
       sendClientEvent({
         type: "conversation.item.create",
         item: {
@@ -224,10 +215,7 @@ export default function App() {
       });
 
       // Force a model response to make sure it responds after certain tool calls
-      if (
-        toolCall.name === "get_iss_position" ||
-        toolCall.name === "display_data"
-      ) {
+      if (toolCall.name === "display_data") {
         sendClientEvent({
           type: "response.create",
         });
@@ -288,7 +276,7 @@ export default function App() {
 
   return (
     <div className="relative size-full">
-      <Scene toolCall={toolCall} />
+      <Whiteboard toolCall={toolCall} />
       <Controls
         handleConnectClick={handleConnectClick}
         handleMicToggleClick={handleMicToggleClick}

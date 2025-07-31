@@ -17,7 +17,7 @@ const Controls: React.FC<ControlsProps> = ({
   return (
     <div className="absolute top-4 right-4 flex items-center z-10">
       <div
-        className="flex bg-slate-800 p-2.5 items-center rounded-full mr-2 cursor-pointer"
+        className="flex bg-white shadow-lg border border-gray-200 p-2.5 items-center rounded-full mr-2 cursor-pointer hover:shadow-xl transition-shadow"
         onClick={handleConnectClick}
       >
         <Wifi
@@ -27,8 +27,8 @@ const Controls: React.FC<ControlsProps> = ({
         />
       </div>
       <div
-        className={`flex bg-slate-800 p-2.5 items-center rounded-full ${
-          isConnected ? "cursor-pointer" : "cursor-not-allowed"
+        className={`flex bg-white shadow-lg border border-gray-200 p-2.5 items-center rounded-full transition-shadow ${
+          isConnected ? "cursor-pointer hover:shadow-xl" : "cursor-not-allowed opacity-50"
         }`}
         onClick={handleMicToggleClick}
       >

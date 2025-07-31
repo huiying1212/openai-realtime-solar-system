@@ -1,130 +1,143 @@
-# Realtime Solar System Demo
+# Realtime AI Teaching Whiteboard
 
 [![MIT License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 ![NextJS](https://img.shields.io/badge/Built_with-NextJS-blue)
 ![OpenAI API](https://img.shields.io/badge/Powered_by-OpenAI_API-orange)
 
-This demo showcases how to use the [OpenAI Realtime API](https://platform.openai.com/docs/guides/realtime) to interact through voice with a 3D scene (built with [Spline](https://spline.design/)), in this case a scene representing the solar system.
+这是一个基于 [OpenAI Realtime API](https://platform.openai.com/docs/guides/realtime) 的智能教学白板工具，能够通过语音实时生成结构化的教学内容展示。
 
-It is implemented using the [Realtime + WebRTC integration](https://platform.openai.com/docs/guides/realtime-webrtc) and uses [Function Calling](https://platform.openai.com/docs/guides/realtime-model-capabilities#function-calling) to trigger actions in the app.
+该工具使用 [Realtime + WebRTC integration](https://platform.openai.com/docs/guides/realtime-webrtc) 实现语音交互，并通过 [Function Calling](https://platform.openai.com/docs/guides/realtime-model-capabilities#function-calling) 触发白板内容的动态生成和组织。
 
 ![screenshot](./public/screenshot.jpg)
 
-## How to use
+## 功能特点
 
-### Running the application
+### 🎤 语音驱动的内容生成
+- 通过自然语音输入自动生成结构化内容
+- 实时语音识别和内容组织
+- 支持多种内容格式（标题、副标题、要点、段落、重点标注）
 
-1. **Set up the OpenAI API:**
+### 📊 智能数据可视化
+- 自动识别数值数据并生成图表
+- 支持柱状图和饼图展示
+- 实时图表生成和展示
 
-   - If you're new to the OpenAI API, [sign up for an account](https://platform.openai.com/signup).
-   - Follow the [Quickstart](https://platform.openai.com/docs/quickstart) to retrieve your API key.
+### 📝 动态白板功能
+- 清晰的内容层次结构
+- 实时内容添加和排版
+- 分节管理和内容组织
+- 响应式布局设计
 
-2. **Clone the Repository:**
+## 使用方法
+
+### 运行应用
+
+1. **设置 OpenAI API：**
+
+   - 如果您是 OpenAI API 新用户，请[注册账户](https://platform.openai.com/signup)
+   - 按照[快速开始指南](https://platform.openai.com/docs/quickstart)获取您的 API 密钥
+
+2. **克隆项目：**
 
    ```bash
-   git clone https://github.com/openai/openai-realtime-solar-system.git
+   git clone https://github.com/openai/openai-realtime-whiteboard-teaching.git
    ```
 
-3. **Set your API key:**
+3. **设置 API 密钥：**
 
-   2 options:
+   有两种方式：
 
-   - Set the `OPENAI_API_KEY` environment variable [globally in your system](https://platform.openai.com/docs/quickstart#create-and-export-an-api-key)
-   - Set the `OPENAI_API_KEY` environment variable in the project:
-     Create a `.env` file at the root of the project and add the following line:
+   - 在系统中[全局设置](https://platform.openai.com/docs/quickstart#create-and-export-an-api-key) `OPENAI_API_KEY` 环境变量
+   - 在项目中设置环境变量：
+     在项目根目录创建 `.env` 文件并添加：
      ```bash
      OPENAI_API_KEY=<your_api_key>
      ```
 
-4. **Install dependencies:**
+4. **安装依赖：**
 
-   Navigate to the project directory and run:
+   进入项目目录并运行：
 
    ```bash
    npm install
    ```
 
-5. **Run the app:**
+5. **运行应用：**
 
    ```bash
    npm run dev
    ```
 
-   The app will be available at [http://localhost:3000](http://localhost:3000).
+   应用将在 [http://localhost:3000](http://localhost:3000) 启动。
 
-**Note:** the 1st time you load the app, the scene can take a while to load (it's heavy!). The subsequent loads should be faster as it will be cached.
+### 开始教学会话
 
-### Starting a session
+1. 等待页面加载完成（首次加载可能需要几秒钟）
+2. 点击右上角的WiFi图标开始新的会话
+3. 图标变绿后，即可开始语音教学
+4. 使用麦克风图标控制录音开关
+5. 点击WiFi图标可停止会话并重置对话
 
-To start a new Realtime session, wait for a few seconds for the page to load properly, thenclick on the wifi icon in the top right corner of the app.
-Once it turns green, you can start talking to the model.
+## 使用示例
 
-You can use the mic icon right next to it to toggle the microphone on and off. When you start the session, it will automatically turn on, but you can turn it off to mute yourself while the session is running.
+### 配置的交互功能
 
-Toggling the wifi icon will stop the session, and the conversation will be reset.
+白板工具会根据您的语音内容自动：
 
-## Demo flow
+📝 **内容组织** - 将您的讲解自动格式化为结构化内容：
+- 主要话题 → 标题格式
+- 子话题 → 副标题格式  
+- 关键点 → 要点列表格式
+- 详细解释 → 段落格式
+- 重要信息 → 高亮显示
 
-**Make sure there is no background noise or echo when you talk to the model, as this may cause interruptions.**
+📊 **数据可视化** - 当您提到数据时自动生成图表：
+- 比较数据 → 柱状图
+- 比例分布 → 饼图
 
-The demo is configured with instructions prompting the model to answer any question about the solar system. Additionally, the model has access to multiple tools that map to actions in the app or animations in the spline scene.
+🗂️ **内容管理** - 智能管理教学内容：
+- 自动创建新章节
+- 清理白板内容
+- 维护内容层次结构
 
-### Configured interactions
+### 教学示例流程
 
-More specifically, the following interactions trigger animations:
+以下是一个典型的教学场景：
 
-🪐 Asking about a **specific planet** will trigger a visual focus on that planet if the animation was set up in the spline scene (works with the Sun, Earth, Mercury, Mars, Jupiter, Saturn, Neptune, Pluto). These animations can also be triggered by clicking on the planets in the UI.
+1. 说："今天我们来学习人工智能基础" → 自动创建标题
+2. 说："人工智能有三个主要分支" → 自动创建副标题
+3. 说："机器学习、深度学习、强化学习" → 自动创建要点列表
+4. 提供具体数据："机器学习占AI应用的60%，深度学习30%，强化学习10%" → 自动生成饼图
+5. 说："现在我们开始新的章节" → 自动创建新分节
+6. 说："清空白板" → 清理所有内容
 
-🌕 Asking about **moons** will trigger the moons to appear if they have been set up in the spline scene (works with Pluto's moons and Jupiter's galilean moons).
+## 自定义配置
 
-📊 Asking about **data** that can be represented with a chart will result in a chart being displayed in the UI (bar chart or pie chart).
+您可以通过修改以下文件来自定义工具行为：
 
-🛰️ Asking about the position of the **ISS** will result in the ISS position being fetched and the ISS being displayed in the spline scene with the corresponding animation.
+- `lib/config.ts` - 修改AI指令和工具定义
+- `lib/constants.ts` - 修改[语音设置](https://platform.openai.com/docs/api-reference/realtime-sessions/create#realtime-sessions-create-voice)
+- `components/whiteboard.tsx` - 自定义白板样式和布局
 
-👋 Saying something like "thank you, I'm good" or anything to **close the conversation** will reset the camera to the initial position. This animation can also be triggered by hitting the space bar.
+### 工具配置
 
-🌌 Asking about the planets' **orbits** will result in a camera change to see the solar system from above. This animation can also be triggered by hitting the M key to change to orbit view, and pressing the Enter key to change back to main view.
+当前支持的工具包括：
 
-For more details about tools used by the model, see the `lib/config.ts` file.
+1. **add_content** - 添加结构化内容到白板
+2. **display_data** - 显示数据图表
+3. **clear_whiteboard** - 清空白板
+4. **create_section** - 创建新章节
 
-### Example flow
+您可以在 `lib/config.ts` 中添加新的工具或修改现有工具的行为。
 
-Here is an example flow that showcases the different interactions:
+## 技术架构
 
-1. Say something like "I'm curious about Earth" to focus on Earth
-2. Ask for the distribution of land vs water - a pie chart should appear, if not prompt the model to show it to you
-3. Say something like "I have a question about Mars now" to focus on Mars
-4. Ask for the highest volcano and how it compares to Mount Everest - a bar chart should appear, if not prompt the model to show it to you
-5. Say something like "thank you, I'm good" to reset the camera
-6. Ask where the ISS is - the model should reply with the position and the ISS should appear in the scene
-7. Say that you'd like to see Pluto now to focus on Pluto
-8. Ask about its moons - 5 moons will pop up
-9. (optional): Do the same with Jupiter and ask about Galilean moons - 4 moons will pop up
-10. Ask something related to the position of the planets in the solar system, for example "how are the planets positioned in their orbits" - The view will change to a high level view with orbits
+- **前端框架**: Next.js 15 + React 19 + TypeScript
+- **样式**: Tailwind CSS
+- **图表**: Chart.js + Recharts
+- **语音交互**: OpenAI Realtime API + WebRTC
+- **图标**: Lucide React
 
-## Customization
+## 许可证
 
-This demo is just an example of how to use Function Calling with the Realtime API to trigger actions in an application, including sending events to a spline scene.
-
-You can read more about how to build your own scene in the [Spline documentation](https://docs.spline.design/doc). You can then change the scene url in the `components/scene.tsx` file.
-
-```html
-<Spline
-  scene="https://prod.spline.design/<scene_id>/scene.splinecode"
-  onLoad="{onLoad}"
-/>
-```
-
-If you want to use your own scene, make sure to configure trigger events in the spline scene, and update the code to trigger the events in the `components/scene.tsx` file.
-
-For example, you can add to any object in your scene a `mouseDown` event that will trigger an animation. You can then trigger this event in the `components/scene.tsx` file by calling `spline.current.emitEvent("mouseDown", "object_name")`.
-
-You can also update:
-
-- The instructions in the `lib/config.ts` file to change the behavior of the model
-- The tools the model has access to in the `lib/config.ts` file
-- The [voice](https://platform.openai.com/docs/api-reference/realtime-sessions/create#realtime-sessions-create-voice) in the `lib/constants.ts` file
-
-## License
-
-This project is licensed under the MIT License. See the LICENSE file for details.
+本项目采用 MIT 许可证。详情请参阅 LICENSE 文件。

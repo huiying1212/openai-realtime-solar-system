@@ -28,7 +28,7 @@ const getChartConfig = (data: any) => {
     data.forEach((item: any) => {
       config[formatKey(item.label)] = {
         label: item.label,
-        color: "#ffffff",
+        color: "#374151", // 深灰色文字
       };
     });
   }
@@ -42,7 +42,7 @@ const getChartData = (data: any, chartType: string) => {
     label: item.label,
     value: parseFloat(item.value),
     fill:
-      chartType === "pie" ? chartColors[index % chartColors.length] : "#ffffff",
+      chartType === "pie" ? chartColors[index % chartColors.length] : "#3B82F6", // 蓝色柱状图
   }));
 };
 
@@ -64,18 +64,22 @@ export const getComponent = (component: Component) => {
     case "bar":
       return (
         <div>
-          <h1 className="text-white font-bold text-xl">{component.title}</h1>
+          <h1 className="text-gray-800 font-bold text-xl mb-4">{component.title}</h1>
+          {component.text && (
+            <p className="text-gray-600 text-sm mb-4">{component.text}</p>
+          )}
           <ChartContainer config={chartConfig}>
             <BarChart accessibilityLayer data={chartData}>
-              <CartesianGrid vertical={false} />
+              <CartesianGrid vertical={false} stroke="#E5E7EB" />
               <XAxis
                 dataKey="label"
                 tickLine={false}
                 tickMargin={10}
                 axisLine={false}
+                tick={{ fill: "#374151" }}
                 tickFormatter={(value) => value.slice(0, 7)}
               />
-              <Bar dataKey="value" fill={chartColors[0]} radius={8} />
+              <Bar dataKey="value" fill="#3B82F6" radius={8} />
             </BarChart>
           </ChartContainer>
         </div>

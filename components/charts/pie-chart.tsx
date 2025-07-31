@@ -31,12 +31,15 @@ const getChartData = (data: any) => {
   };
 };
 
-export function PieChartComponent({ title, data }: Component) {
+export function PieChartComponent({ title, text, data }: Component) {
   const chartData = getChartData(data);
 
   return (
     <div className="flex flex-col justify-center items-center">
-      <h1 className="text-white mb-2 font-medium text-xl">{title}</h1>
+      <h1 className="text-gray-800 mb-2 font-medium text-xl">{title}</h1>
+      {text && (
+        <p className="text-gray-600 text-sm mb-4 text-center">{text}</p>
+      )}
       <Pie data={chartData} />
     </div>
   );

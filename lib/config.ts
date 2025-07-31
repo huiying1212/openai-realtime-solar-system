@@ -1,69 +1,52 @@
-const PLANETS = [
-  "Sun",
-  "Mercury",
-  "Venus",
-  "Earth",
-  "Mars",
-  "Jupiter",
-  "Saturn",
-  "Uranus",
-  "Neptune",
-  "Pluto",
-];
-
-const MOONS = [
-  "Io",
-  "Europa",
-  "Ganymede",
-  "Callisto",
-  "Kerberos",
-  "Styx",
-  "Nix",
-  "Hydra",
-  "Charon",
-];
-
 const toolsDefinition = [
   {
-    name: "focus_planet",
-    description: "Focus on a specific planet, when the user is asking about it",
+    name: "add_content",
+    description: "Add text content to the whiteboard when the user is explaining something or giving a lecture",
     parameters: {
       type: "object",
       properties: {
-        planet: {
+        title: {
           type: "string",
-          enum: PLANETS,
-          description: "The name of the planet to focus on",
+          description: "The title or heading for this content section",
+        },
+        content: {
+          type: "string", 
+          description: "The main content text to display on the whiteboard",
+        },
+        type: {
+          type: "string",
+          enum: ["title", "subtitle", "bullet", "paragraph", "highlight"],
+          description: "The type of content formatting to apply",
         },
       },
-      required: ["planet"],
+      required: ["content", "type"],
     },
   },
   {
     name: "display_data",
     description:
-      "Display a chart to summarize the answer with data points. Respond to the user before calling this tool, and call this as soon as there is numeric data to be displayed.",
+      "Display a chart to visualize data points during the lecture. Use this when presenting numerical information, comparisons, or statistical data.",
     parameters: {
       type: "object",
       properties: {
         chart: {
           type: "string",
           enum: ["bar", "pie"],
-          description: "The most appropriate chart to use",
+          description: "The most appropriate chart type for the data",
         },
         title: {
           type: "string",
           description:
-            "The title of the response that will be displayed above the chart, be concise",
+            "The title of the chart that will be displayed",
         },
         text: {
           type: "string",
           description:
-            "Optional text to display above the chart for more context, empty if unnecessary",
+            "Optional explanatory text to display with the chart",
         },
         data: {
           type: "array",
-          description: "data to display in the component, empty array if N/A",
+          description: "data to display in the chart",
           items: {
             type: "object",
             properties: {
@@ -84,38 +67,24 @@ const toolsDefinition = [
     },
   },
   {
-    name: "reset_camera",
+    name: "clear_whiteboard",
     description:
-      "When the user says that they're done, for example 'thank you, i'm ok', zoom out of a planet focus and reset the camera to the initial position",
+      "Clear the whiteboard when starting a new topic, section, or when the user explicitly asks to clear the board",
     parameters: {},
   },
   {
-    name: "show_orbit",
-    description:
-      "Show planets orbits when there's a question related to to the position of the planet in the solar system",
-    parameters: {},
-  },
-  {
-    name: "show_moons",
-    description: "Show a list of moons",
+    name: "create_section",
+    description: "Create a new section or topic on the whiteboard to organize the lecture content",
     parameters: {
       type: "object",
       properties: {
-        moons: {
-          type: "array",
-          items: {
-            type: "string",
-            enum: MOONS,
-          },
+        section_title: {
+          type: "string",
+          description: "The title of the new section",
         },
       },
-      required: ["moons"],
+      required: ["section_title"],
     },
-  },
-  {
-    name: "get_iss_position",
-    description: "Get the ISS position and once you have it, say it out loud",
-    parameters: {},
   },
 ];
 
@@ -125,27 +94,32 @@ export const TOOLS = toolsDefinition.map((tool) => ({
 }));
 
 export const INSTRUCTIONS = `
-You are an assistant helping users navigate a 3D solar system and understand the planets and their orbits.
+You are an AI teaching assistant that helps create dynamic presentations on a digital whiteboard based on spoken content.
 
-As soon as the user starts talking about a specific planet, use the focus_planet tool to zoom in on that planet.
-When they stop talking about it and ask about another topic, there's no need to focus on it anymore, so call the reset_camera tool to reset the camera position to view the whole solar system.
+Your role is to listen to the lecturer and automatically organize their spoken content into a well-structured whiteboard presentation. You should:
 
-Answer any question they have about the solar system, and if they have a specific question that you can answer with numbers, respond to the question and then display a chart to them using the display_data tool to show the summary of the answer on the screen. For example, if they ask about a comparison of heights, show them a bar chart. If they ask about the repartition or distribution of elements, show them a pie chart.
-Call the display_data tool to display the response, then say the response out loud. For example, if they ask a question that can be answered with a chart (distribution of elements, comparison of numbers), first call the display_data tool to show the chart,then say out loud what you are showing in the chart.
+1. **Content Organization**: When the user speaks about teaching content, use the add_content tool to display their main points on the whiteboard with appropriate formatting:
+   - Use "title" for main topics or lesson titles
+   - Use "subtitle" for sub-topics or section headings  
+   - Use "bullet" for key points, lists, or important facts
+   - Use "paragraph" for longer explanations or descriptions
+   - Use "highlight" for emphasizing critical information
 
-If they ask about something related to the position of the planets in the solar system, use the show_orbit tool to see a view from above.
+2. **Data Visualization**: When the user mentions numerical data, statistics, comparisons, or any information that would benefit from visual representation, automatically create charts using the display_data tool:
+   - Use bar charts for comparisons, rankings, or categorical data
+   - Use pie charts for proportions, percentages, or parts of a whole
 
-If they ask about moons, talk about them and then call the show_moons tool to display a list of moons.
+3. **Section Management**: 
+   - Use create_section when the user moves to a new major topic or lesson section
+   - Use clear_whiteboard when starting a completely new lesson or when explicitly requested
 
-When they say something like "thank you, I'm ok" or something meaning that they're done with the questions and there's no need to continue the conversation, call the reset_camera tool.
-Do not call this tool if the user hasn't specifically said something that should trigger the camera reset. 
+4. **Responsive Formatting**: Organize content logically and maintain good visual hierarchy. Don't wait for explicit instructions - proactively format and display content as the user speaks.
 
-Whenever you can, call a tool after responding if it makes sense.
+5. **Lecture Flow**: Follow the natural flow of the lecture, adding content in real-time as the user explains concepts. Be concise but capture the essential information.
 
-Be friendly but not overly excited, and imagine you're talking to students learning in a classroom.
-Be very concise in your answers, and speak fast. Don't add unnecessary details that the user hasn't asked for.
+Be proactive in organizing content and creating visual aids. Your goal is to create a clear, well-structured presentation that enhances the learning experience.
 
-If speaking in another language, use a native accent.
+Keep your verbal responses brief and natural, as if you're a helpful teaching assistant. Focus more on organizing the content than on lengthy explanations.
 `;
 
 export const VOICE = "coral";
