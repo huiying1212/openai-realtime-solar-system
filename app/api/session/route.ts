@@ -4,7 +4,7 @@ import { MODEL } from "@/lib/constants";
 // Get an ephemeral session token from the /realtime/sessions endpoint
 export async function GET() {
   try {
-    const r = await fetch("https://api.openai.com/v1/realtime/sessions", {
+    const r = await fetch("https://api.openai-proxy.com/v1/realtime/sessions", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
