@@ -1,130 +1,110 @@
-# Realtime Solar System Demo
+# 智能助教系统 - AI Intelligent Tutor
 
-[![MIT License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-![NextJS](https://img.shields.io/badge/Built_with-NextJS-blue)
-![OpenAI API](https://img.shields.io/badge/Powered_by-OpenAI_API-orange)
+基于OpenAI Realtime API的智能助教系统，通过语音交互和智能白板为学生提供个性化的学习体验。
 
-This demo showcases how to use the [OpenAI Realtime API](https://platform.openai.com/docs/guides/realtime) to interact through voice with a 3D scene (built with [Spline](https://spline.design/)), in this case a scene representing the solar system.
+## 功能特点
 
-It is implemented using the [Realtime + WebRTC integration](https://platform.openai.com/docs/guides/realtime-webrtc) and uses [Function Calling](https://platform.openai.com/docs/guides/realtime-model-capabilities#function-calling) to trigger actions in the app.
+- **实时语音交互**: 支持自然语言语音对话，学生可以直接提问
+- **智能白板**: 实时展示教学内容，包括文本、图表、列表等多种形式
+- **多媒体展示**: 支持条形图、饼图、折线图等数据可视化
+- **同步教学**: 语音讲解与视觉展示同步进行，提升学习效果
+- **自适应内容**: 根据学生问题动态生成教学内容
 
-![screenshot](./public/screenshot.jpg)
+## 技术栈
 
-## How to use
+- **Frontend**: Next.js 15, React 19, TypeScript
+- **UI**: Tailwind CSS
+- **图表**: Chart.js + react-chartjs-2
+- **AI**: OpenAI Realtime API
+- **实时通信**: WebRTC
 
-### Running the application
+## 开始使用
 
-1. **Set up the OpenAI API:**
+### 1. 安装依赖
 
-   - If you're new to the OpenAI API, [sign up for an account](https://platform.openai.com/signup).
-   - Follow the [Quickstart](https://platform.openai.com/docs/quickstart) to retrieve your API key.
-
-2. **Clone the Repository:**
-
-   ```bash
-   git clone https://github.com/openai/openai-realtime-solar-system.git
-   ```
-
-3. **Set your API key:**
-
-   2 options:
-
-   - Set the `OPENAI_API_KEY` environment variable [globally in your system](https://platform.openai.com/docs/quickstart#create-and-export-an-api-key)
-   - Set the `OPENAI_API_KEY` environment variable in the project:
-     Create a `.env` file at the root of the project and add the following line:
-     ```bash
-     OPENAI_API_KEY=<your_api_key>
-     ```
-
-4. **Install dependencies:**
-
-   Navigate to the project directory and run:
-
-   ```bash
-   npm install
-   ```
-
-5. **Run the app:**
-
-   ```bash
-   npm run dev
-   ```
-
-   The app will be available at [http://localhost:3000](http://localhost:3000).
-
-**Note:** the 1st time you load the app, the scene can take a while to load (it's heavy!). The subsequent loads should be faster as it will be cached.
-
-### Starting a session
-
-To start a new Realtime session, wait for a few seconds for the page to load properly, thenclick on the wifi icon in the top right corner of the app.
-Once it turns green, you can start talking to the model.
-
-You can use the mic icon right next to it to toggle the microphone on and off. When you start the session, it will automatically turn on, but you can turn it off to mute yourself while the session is running.
-
-Toggling the wifi icon will stop the session, and the conversation will be reset.
-
-## Demo flow
-
-**Make sure there is no background noise or echo when you talk to the model, as this may cause interruptions.**
-
-The demo is configured with instructions prompting the model to answer any question about the solar system. Additionally, the model has access to multiple tools that map to actions in the app or animations in the spline scene.
-
-### Configured interactions
-
-More specifically, the following interactions trigger animations:
-
-🪐 Asking about a **specific planet** will trigger a visual focus on that planet if the animation was set up in the spline scene (works with the Sun, Earth, Mercury, Mars, Jupiter, Saturn, Neptune, Pluto). These animations can also be triggered by clicking on the planets in the UI.
-
-🌕 Asking about **moons** will trigger the moons to appear if they have been set up in the spline scene (works with Pluto's moons and Jupiter's galilean moons).
-
-📊 Asking about **data** that can be represented with a chart will result in a chart being displayed in the UI (bar chart or pie chart).
-
-🛰️ Asking about the position of the **ISS** will result in the ISS position being fetched and the ISS being displayed in the spline scene with the corresponding animation.
-
-👋 Saying something like "thank you, I'm good" or anything to **close the conversation** will reset the camera to the initial position. This animation can also be triggered by hitting the space bar.
-
-🌌 Asking about the planets' **orbits** will result in a camera change to see the solar system from above. This animation can also be triggered by hitting the M key to change to orbit view, and pressing the Enter key to change back to main view.
-
-For more details about tools used by the model, see the `lib/config.ts` file.
-
-### Example flow
-
-Here is an example flow that showcases the different interactions:
-
-1. Say something like "I'm curious about Earth" to focus on Earth
-2. Ask for the distribution of land vs water - a pie chart should appear, if not prompt the model to show it to you
-3. Say something like "I have a question about Mars now" to focus on Mars
-4. Ask for the highest volcano and how it compares to Mount Everest - a bar chart should appear, if not prompt the model to show it to you
-5. Say something like "thank you, I'm good" to reset the camera
-6. Ask where the ISS is - the model should reply with the position and the ISS should appear in the scene
-7. Say that you'd like to see Pluto now to focus on Pluto
-8. Ask about its moons - 5 moons will pop up
-9. (optional): Do the same with Jupiter and ask about Galilean moons - 4 moons will pop up
-10. Ask something related to the position of the planets in the solar system, for example "how are the planets positioned in their orbits" - The view will change to a high level view with orbits
-
-## Customization
-
-This demo is just an example of how to use Function Calling with the Realtime API to trigger actions in an application, including sending events to a spline scene.
-
-You can read more about how to build your own scene in the [Spline documentation](https://docs.spline.design/doc). You can then change the scene url in the `components/scene.tsx` file.
-
-```html
-<Spline
-  scene="https://prod.spline.design/<scene_id>/scene.splinecode"
-  onLoad="{onLoad}"
-/>
+```bash
+npm install
 ```
 
-If you want to use your own scene, make sure to configure trigger events in the spline scene, and update the code to trigger the events in the `components/scene.tsx` file.
+### 2. 环境配置
 
-For example, you can add to any object in your scene a `mouseDown` event that will trigger an animation. You can then trigger this event in the `components/scene.tsx` file by calling `spline.current.emitEvent("mouseDown", "object_name")`.
+创建 `.env` 文件并添加 OpenAI API 密钥：
 
-You can also update:
+```env
+OPENAI_API_KEY=your_openai_api_key_here
+```
 
-- The instructions in the `lib/config.ts` file to change the behavior of the model
-- The tools the model has access to in the `lib/config.ts` file
-- The [voice](https://platform.openai.com/docs/api-reference/realtime-sessions/create#realtime-sessions-create-voice) in the `lib/constants.ts` file
+### 3. 运行开发服务器
 
-## License
+```bash
+npm run dev
+```
 
-This project is licensed under the MIT License. See the LICENSE file for details.
+在浏览器中打开 [http://localhost:3000](http://localhost:3000) 查看应用。
+
+## 使用方法
+
+1. **连接会话**: 点击"连接"按钮启动AI助教会话
+2. **语音交互**: 点击麦克风按钮开始说话，向AI助教提问
+3. **查看白板**: AI助教会在白板上实时展示相关教学内容
+4. **持续学习**: 可以继续提问，AI会根据问题更新白板内容
+
+## 白板功能
+
+- **文本展示**: 显示概念解释、定义等文本内容
+- **列表展示**: 展示要点、步骤等结构化信息
+- **图表展示**: 
+  - 条形图：用于数据对比
+  - 饼图：用于比例分布
+  - 折线图：用于趋势展示
+- **内容高亮**: 突出显示重要概念
+- **清空白板**: 切换话题时自动清理内容
+
+## AI助教能力
+
+- 回答各学科问题
+- 提供概念解释和定义
+- 生成图表和数据可视化
+- 分步骤讲解复杂概念
+- 提供学习建议和指导
+
+## 项目结构
+
+```
+├── app/
+│   ├── api/session/     # OpenAI会话管理API
+│   ├── layout.tsx       # 应用布局
+│   └── page.tsx         # 主页面
+├── components/
+│   ├── app.tsx          # 主应用组件
+│   ├── whiteboard.tsx   # 智能白板组件
+│   ├── controls.tsx     # 控制面板
+│   └── logs.tsx         # 日志显示
+├── lib/
+│   ├── config.ts        # AI配置和工具定义
+│   └── constants.ts     # 常量配置
+└── public/              # 静态资源
+```
+
+## 开发指南
+
+### 添加新的白板内容类型
+
+1. 在 `components/whiteboard.tsx` 中添加新的内容渲染逻辑
+2. 在 `lib/config.ts` 中更新工具定义
+3. 在AI指令中添加相应的使用说明
+
+### 自定义AI行为
+
+修改 `lib/config.ts` 中的 `INSTRUCTIONS` 常量来调整AI助教的行为和教学风格。
+
+## 部署
+
+```bash
+npm run build
+npm start
+```
+
+## 许可证
+
+MIT License

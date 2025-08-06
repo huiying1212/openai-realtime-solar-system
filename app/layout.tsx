@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Solar System",
-  description: "Realtime API demo",
+  title: "智能助教 - AI Tutor",
+  description: "基于实时语音交互的智能助教系统，支持白板展示和语音教学",
   icons: {
     icon: "/icon.png",
   },
