@@ -214,8 +214,11 @@ export default function App() {
         },
       });
 
-      // Note: Let the model naturally continue the conversation after tool calls
-      // The model should handle the flow without forcing additional responses
+      // CRITICAL FIX: Trigger response generation after tool call
+      // This ensures the LLM continues speaking after displaying content
+      sendClientEvent({
+        type: "response.create",
+      });
     }
 
     if (dataChannel) {
