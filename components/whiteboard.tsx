@@ -47,11 +47,18 @@ interface WhiteboardContent {
   };
   items?: string[];
   highlightedText?: string;
+  timestamp?: number; // Add timestamp to track when slide was created
 }
 
 const Whiteboard: React.FC<WhiteboardProps> = ({ toolCall }) => {
-  const [content, setContent] = useState<WhiteboardContent | null>(null);
+  const [slides, setSlides] = useState<WhiteboardContent[]>([]);
+  const [currentSlideIndex, setCurrentSlideIndex] = useState<number>(-1);
   const [highlightedText, setHighlightedText] = useState<string>("");
+
+  // Get current content based on slide index
+  const content = currentSlideIndex >= 0 && currentSlideIndex < slides.length 
+    ? slides[currentSlideIndex] 
+    : null;
 
   useEffect(() => {
     if (!toolCall) return;
@@ -72,18 +79,27 @@ const Whiteboard: React.FC<WhiteboardProps> = ({ toolCall }) => {
     switch (name) {
       case "display_content":
         console.log("Displaying content on whiteboard:", args);
-        setContent({
+        const newContent: WhiteboardContent = {
           title: args.title || "",
           content: args.content || "",
           type: args.type || "text",
           chart: args.chart,
           items: args.items,
+          timestamp: Date.now(),
+        };
+        
+        // Add new slide to history and set as current
+        setSlides(prevSlides => {
+          const newSlides = [...prevSlides, newContent];
+          setCurrentSlideIndex(newSlides.length - 1); // Set to the index of the new slide
+          return newSlides;
         });
         break;
 
       case "clear_whiteboard":
         console.log("Clearing whiteboard");
-        setContent(null);
+        setSlides([]);
+        setCurrentSlideIndex(-1);
         setHighlightedText("");
         break;
 
@@ -97,6 +113,45 @@ const Whiteboard: React.FC<WhiteboardProps> = ({ toolCall }) => {
         break;
     }
   }, [toolCall]);
+
+  // Add keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (slides.length <= 1) return;
+      
+      switch (event.key) {
+        case 'ArrowLeft':
+          event.preventDefault();
+          handlePreviousSlide();
+          break;
+        case 'ArrowRight':
+          event.preventDefault();
+          handleNextSlide();
+          break;
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [currentSlideIndex, slides.length]);
+
+  const handlePreviousSlide = () => {
+    if (currentSlideIndex > 0) {
+      setCurrentSlideIndex(currentSlideIndex - 1);
+    }
+  };
+
+  const handleNextSlide = () => {
+    if (currentSlideIndex < slides.length - 1) {
+      setCurrentSlideIndex(currentSlideIndex + 1);
+    }
+  };
+
+  const handleSlideSelect = (index: number) => {
+    setCurrentSlideIndex(index);
+  };
 
   const renderChart = (chartData: any) => {
     if (!chartData || !chartData.data) return null;
@@ -167,6 +222,48 @@ const Whiteboard: React.FC<WhiteboardProps> = ({ toolCall }) => {
     }
   };
 
+  const renderNavigationControls = () => {
+    if (slides.length <= 1) return null;
+
+    return (
+      <div className="absolute top-4 right-4 flex items-center space-x-2 bg-white rounded-lg shadow-md p-2 border">
+        <button
+          onClick={handlePreviousSlide}
+          disabled={currentSlideIndex <= 0}
+          className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-sm"
+          title="Previous slide"
+        >
+          ‹
+        </button>
+        
+        <select
+          value={currentSlideIndex}
+          onChange={(e) => handleSlideSelect(Number(e.target.value))}
+          className="px-2 py-1 border rounded text-sm"
+        >
+          {slides.map((slide, index) => (
+            <option key={index} value={index}>
+              {index + 1}. {slide.title.substring(0, 20)}{slide.title.length > 20 ? '...' : ''}
+            </option>
+          ))}
+        </select>
+        
+        <button
+          onClick={handleNextSlide}
+          disabled={currentSlideIndex >= slides.length - 1}
+          className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-sm"
+          title="Next slide"
+        >
+          ›
+        </button>
+        
+        <div className="text-xs text-gray-500 ml-2">
+          {currentSlideIndex + 1} / {slides.length}
+        </div>
+      </div>
+    );
+  };
+
   const renderContent = () => {
     if (!content) {
       return (
@@ -174,11 +271,14 @@ const Whiteboard: React.FC<WhiteboardProps> = ({ toolCall }) => {
           <div className="mb-4">智能白板 - 等待内容展示</div>
           <button 
             onClick={() => {
-              setContent({
+              const testContent: WhiteboardContent = {
                 title: "测试内容",
                 content: "这是一个测试内容，用于验证白板功能是否正常工作。",
-                type: "text"
-              });
+                type: "text",
+                timestamp: Date.now(),
+              };
+              setSlides([testContent]);
+              setCurrentSlideIndex(0);
             }}
             className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm"
           >
@@ -231,7 +331,8 @@ const Whiteboard: React.FC<WhiteboardProps> = ({ toolCall }) => {
   };
 
   return (
-    <div className="size-full bg-white border-2 border-gray-200 rounded-lg shadow-lg">
+    <div className="size-full bg-white border-2 border-gray-200 rounded-lg shadow-lg relative">
+      {renderNavigationControls()}
       {renderContent()}
     </div>
   );
