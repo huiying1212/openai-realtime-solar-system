@@ -275,7 +275,7 @@ export default function App() {
 
   return (
     <div className="relative size-full bg-gray-50">
-      <div className="h-full p-4">
+      <div className="h-full">
         <Whiteboard toolCall={toolCall} />
       </div>
       <Controls

@@ -226,24 +226,24 @@ const Whiteboard: React.FC<WhiteboardProps> = ({ toolCall }) => {
     if (slides.length <= 1) return null;
 
     return (
-      <div className="absolute top-4 right-4 flex items-center space-x-2 bg-white rounded-lg shadow-md p-2 border">
+      <div className="flex items-center justify-center space-x-2 bg-white rounded-lg shadow-md p-3 border mb-4">
         <button
           onClick={handlePreviousSlide}
           disabled={currentSlideIndex <= 0}
-          className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-sm"
+          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-sm font-medium"
           title="Previous slide"
         >
-          ‹
+          ‹ Previous
         </button>
         
         <select
           value={currentSlideIndex}
           onChange={(e) => handleSlideSelect(Number(e.target.value))}
-          className="px-2 py-1 border rounded text-sm"
+          className="px-3 py-2 border rounded text-sm min-w-[200px]"
         >
           {slides.map((slide, index) => (
             <option key={index} value={index}>
-              {index + 1}. {slide.title.substring(0, 20)}{slide.title.length > 20 ? '...' : ''}
+              {index + 1}. {slide.title.substring(0, 30)}{slide.title.length > 30 ? '...' : ''}
             </option>
           ))}
         </select>
@@ -251,13 +251,13 @@ const Whiteboard: React.FC<WhiteboardProps> = ({ toolCall }) => {
         <button
           onClick={handleNextSlide}
           disabled={currentSlideIndex >= slides.length - 1}
-          className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-sm"
+          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-sm font-medium"
           title="Next slide"
         >
-          ›
+          Next ›
         </button>
         
-        <div className="text-xs text-gray-500 ml-2">
+        <div className="text-sm text-gray-600 ml-4 font-medium">
           {currentSlideIndex + 1} / {slides.length}
         </div>
       </div>
@@ -331,9 +331,11 @@ const Whiteboard: React.FC<WhiteboardProps> = ({ toolCall }) => {
   };
 
   return (
-    <div className="size-full bg-white border-2 border-gray-200 rounded-lg shadow-lg relative">
+    <div className="size-full bg-gray-50 flex flex-col items-center justify-center p-8">
       {renderNavigationControls()}
-      {renderContent()}
+      <div className="w-[800px] h-[600px] bg-white border-2 border-gray-200 rounded-lg shadow-lg">
+        {renderContent()}
+      </div>
     </div>
   );
 };
