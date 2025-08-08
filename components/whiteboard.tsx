@@ -1,6 +1,10 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import rehypeHighlight from "rehype-highlight";
+import rehypeRaw from "rehype-raw";
 import { Bar, Pie, Line } from "react-chartjs-2";
 import {
   Chart as ChartJS,
@@ -47,6 +51,7 @@ interface WhiteboardContent {
   };
   items?: string[];
   highlightedText?: string;
+  highlightedTerms?: string[];
   timestamp?: number; // Add timestamp to track when slide was created
 }
 
@@ -85,6 +90,7 @@ const Whiteboard: React.FC<WhiteboardProps> = ({ toolCall }) => {
           type: args.type || "text",
           chart: args.chart,
           items: args.items,
+          highlightedTerms: args.highlightedTerms || (args.highlightedText ? [args.highlightedText] : undefined),
           timestamp: Date.now(),
         };
         
@@ -288,21 +294,70 @@ const Whiteboard: React.FC<WhiteboardProps> = ({ toolCall }) => {
       );
     }
 
-    const highlightContent = (text: string) => {
-      if (!highlightedText) return text;
-      
-      const parts = text.split(new RegExp(`(${highlightedText})`, 'gi'));
-      return parts.map((part, index) => 
-        part.toLowerCase() === highlightedText.toLowerCase() ? 
-          <mark key={index} className="bg-yellow-300 px-1 rounded">{part}</mark> : 
-          part
-      );
+    const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+    const STOP_WORDS = new Set([
+      "the","and","for","with","that","this","from","into","about","your","have","will","would","there","their","been","also","were","them","they","when","what","which","where","while","such","than","then","over","more","some","here","just","very","much","many","like","only","into","onto","each","most","next","once"
+    ]);
+
+    const getAutoTermsFromTitle = (title: string | undefined): string[] => {
+      if (!title) return [];
+      const words = title
+        .toLowerCase()
+        .replace(/[^a-z0-9\s]/gi, " ")
+        .split(/\s+/)
+        .filter((w) => w.length >= 4 && !STOP_WORDS.has(w));
+      const unique = Array.from(new Set(words));
+      return unique.slice(0, 3);
+    };
+
+    const getTermsToHighlight = (): string[] => {
+      const fromSlide = content?.highlightedTerms || [];
+      const fromToolState = highlightedText ? [highlightedText] : [];
+      const terms = [...fromSlide, ...fromToolState]
+        .map((t) => (t || "").trim())
+        .filter((t) => t.length > 0);
+      const deduped = Array.from(new Set(terms));
+      if (deduped.length > 0) return deduped;
+      return getAutoTermsFromTitle(content?.title);
+    };
+
+    const highlightString = (text: string): React.ReactNode => {
+      const terms = getTermsToHighlight();
+      if (terms.length === 0) return text;
+
+      const pattern = new RegExp(`(${terms.map(escapeRegExp).join("|")})`, "gi");
+      const parts = text.split(pattern);
+      return parts.map((part, index) => {
+        const isMatch = terms.some((t) => t.toLowerCase() === part.toLowerCase());
+        if (!isMatch) return part;
+        return (
+          <mark key={index} className="bg-yellow-200 ring-1 ring-yellow-300/60 px-1 rounded">
+            {part}
+          </mark>
+        );
+      });
+    };
+
+    const highlightNodesDeep = (nodes: React.ReactNode): React.ReactNode => {
+      return React.Children.map(nodes, (child) => {
+        if (typeof child === "string") return highlightString(child);
+        if (typeof child === "number" || child == null || child === false || child === true) return child as any;
+        if (React.isValidElement(child)) {
+          const elementType = child.type as any;
+          if (elementType === "code" || elementType === "pre") return child;
+          const childProps: any = (child as React.ReactElement<any>).props || {};
+          const newChildren = highlightNodesDeep(childProps.children as React.ReactNode);
+          return React.cloneElement(child as React.ReactElement<any>, childProps, newChildren);
+        }
+        return child as any;
+      });
     };
 
     return (
       <div className="p-6 h-full overflow-auto">
         <h1 className="text-3xl font-bold mb-6 text-gray-800 border-b-2 border-blue-500 pb-2">
-          {highlightContent(content.title)}
+          {highlightString(content.title)}
         </h1>
 
         {content.type === "chart" && content.chart && (
@@ -316,15 +371,34 @@ const Whiteboard: React.FC<WhiteboardProps> = ({ toolCall }) => {
             <ul className="list-disc list-inside space-y-2 text-lg">
               {content.items.map((item, index) => (
                 <li key={index} className="text-gray-700">
-                  {highlightContent(item)}
+                  {highlightString(item)}
                 </li>
               ))}
             </ul>
           </div>
         )}
 
-        <div className="text-lg leading-relaxed text-gray-700 whitespace-pre-wrap">
-          {highlightContent(content.content)}
+        <div className="prose prose-slate max-w-none text-lg leading-relaxed text-gray-700">
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
+            rehypePlugins={[rehypeRaw, rehypeHighlight]}
+            skipHtml={false}
+            components={{
+              p: ({ children }) => <p>{highlightNodesDeep(children)}</p>,
+              li: ({ children }) => <li>{highlightNodesDeep(children)}</li>,
+              h1: ({ children }) => <h1>{highlightNodesDeep(children)}</h1>,
+              h2: ({ children }) => <h2>{highlightNodesDeep(children)}</h2>,
+              h3: ({ children }) => <h3>{highlightNodesDeep(children)}</h3>,
+              h4: ({ children }) => <h4>{highlightNodesDeep(children)}</h4>,
+              h5: ({ children }) => <h5>{highlightNodesDeep(children)}</h5>,
+              h6: ({ children }) => <h6>{highlightNodesDeep(children)}</h6>,
+              blockquote: ({ children }) => <blockquote>{highlightNodesDeep(children)}</blockquote>,
+              td: ({ children }) => <td>{highlightNodesDeep(children)}</td>,
+              th: ({ children }) => <th>{highlightNodesDeep(children)}</th>,
+            }}
+          >
+            {content.content}
+          </ReactMarkdown>
         </div>
       </div>
     );
