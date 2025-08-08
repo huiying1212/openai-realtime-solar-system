@@ -18,6 +18,9 @@ export default function App() {
   const [isSessionStarted, setIsSessionStarted] = useState(false);
   const [isSessionActive, setIsSessionActive] = useState(false);
   const [isListening, setIsListening] = useState(false);
+  const [connectionState, setConnectionState] = useState<RTCPeerConnectionState>('new');
+  const [reconnectAttempts, setReconnectAttempts] = useState(0);
+  const [isReconnecting, setIsReconnecting] = useState(false);
 
   const [dataChannel, setDataChannel] = useState<RTCDataChannel | null>(null);
   const peerConnection = useRef<RTCPeerConnection | null>(null);
@@ -25,23 +28,107 @@ export default function App() {
   const [audioStream, setAudioStream] = useState<MediaStream | null>(null);
   const audioTransceiver = useRef<RTCRtpTransceiver | null>(null);
   const tracks = useRef<RTCRtpSender[] | null>(null);
+  const reconnectTimeout = useRef<NodeJS.Timeout | null>(null);
+  const maxReconnectAttempts = 3;
+
+  // Auto-reconnect function
+  const autoReconnect = useCallback(async () => {
+    if (reconnectAttempts >= maxReconnectAttempts) {
+      console.log("Max reconnection attempts reached");
+      setIsReconnecting(false);
+      return;
+    }
+
+    setIsReconnecting(true);
+    setReconnectAttempts(prev => prev + 1);
+    
+    console.log(`Attempting to reconnect... (${reconnectAttempts + 1}/${maxReconnectAttempts})`);
+    
+    // Wait a bit before reconnecting
+    await new Promise(resolve => setTimeout(resolve, 2000 + reconnectAttempts * 1000));
+    
+    // Clean up current connection
+    if (peerConnection.current) {
+      peerConnection.current.close();
+    }
+    if (dataChannel) {
+      dataChannel.close();
+    }
+    
+    // Reset states
+    setIsSessionStarted(false);
+    setIsSessionActive(false);
+    setDataChannel(null);
+    peerConnection.current = null;
+    
+    // Try to start a new session
+    try {
+      await startSession();
+      setReconnectAttempts(0);
+      setIsReconnecting(false);
+    } catch (error) {
+      console.error("Reconnection failed:", error);
+      // Try again
+      reconnectTimeout.current = setTimeout(autoReconnect, 3000);
+    }
+  }, [reconnectAttempts, dataChannel]);
 
   // Start a new realtime session
   async function startSession() {
     try {
       if (!isSessionStarted) {
         setIsSessionStarted(true);
+        setConnectionState('connecting');
+        
         // Get an ephemeral session token
-        const session = await fetch("/api/session").then((response) =>
-          response.json()
-        );
+        const sessionResponse = await fetch("/api/session");
+        if (!sessionResponse.ok) {
+          throw new Error(`Session API failed: ${sessionResponse.status}`);
+        }
+        
+        const session = await sessionResponse.json();
+        if (!session.client_secret?.value) {
+          throw new Error("Invalid session response");
+        }
+        
         const sessionToken = session.client_secret.value;
         const sessionId = session.id;
 
         console.log("Session id:", sessionId);
 
-        // Create a peer connection
-        const pc = new RTCPeerConnection();
+        // Create a peer connection with improved configuration
+        const pc = new RTCPeerConnection({
+          iceServers: [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' }
+          ]
+        });
+
+        // Monitor connection state changes
+        pc.onconnectionstatechange = () => {
+          const state = pc.connectionState;
+          console.log('Connection state changed:', state);
+          setConnectionState(state);
+          
+          if (state === 'connected') {
+            setReconnectAttempts(0);
+            setIsReconnecting(false);
+            if (reconnectTimeout.current) {
+              clearTimeout(reconnectTimeout.current);
+              reconnectTimeout.current = null;
+            }
+          } else if (state === 'disconnected' || state === 'failed') {
+            console.log('Connection lost, attempting to reconnect...');
+            if (!isReconnecting) {
+              autoReconnect();
+            }
+          }
+        };
+
+        // Monitor ICE connection state
+        pc.oniceconnectionstatechange = () => {
+          console.log('ICE connection state:', pc.iceConnectionState);
+        };
 
         // Set up to play remote audio from the model
         if (!audioElement.current) {
@@ -49,14 +136,26 @@ export default function App() {
         }
         audioElement.current.autoplay = true;
         pc.ontrack = (e) => {
+          console.log('Received remote audio track');
           if (audioElement.current) {
             audioElement.current.srcObject = e.streams[0];
           }
         };
 
-        const stream = await navigator.mediaDevices.getUserMedia({
-          audio: true,
-        });
+        // Get user media with error handling
+        let stream;
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            audio: {
+              echoCancellation: true,
+              noiseSuppression: true,
+              autoGainControl: true
+            }
+          });
+        } catch (mediaError) {
+          console.error("Failed to get user media:", mediaError);
+          throw new Error("Microphone access failed. Please check permissions.");
+        }
 
         stream.getTracks().forEach((track) => {
           const sender = pc.addTrack(track, stream);
@@ -82,6 +181,10 @@ export default function App() {
           },
         });
 
+        if (!sdpResponse.ok) {
+          throw new Error(`SDP exchange failed: ${sdpResponse.status}`);
+        }
+
         const answer: RTCSessionDescriptionInit = {
           type: "answer",
           sdp: await sdpResponse.text(),
@@ -89,14 +192,24 @@ export default function App() {
         await pc.setRemoteDescription(answer);
 
         peerConnection.current = pc;
+        console.log("Session started successfully");
       }
     } catch (error) {
       console.error("Error starting session:", error);
+      setIsSessionStarted(false);
+      setConnectionState('failed');
+      throw error;
     }
   }
 
   // Stop current session, clean up peer connection and data channel
   function stopSession() {
+    // Clear any pending reconnection attempts
+    if (reconnectTimeout.current) {
+      clearTimeout(reconnectTimeout.current);
+      reconnectTimeout.current = null;
+    }
+    
     if (dataChannel) {
       dataChannel.close();
     }
@@ -114,6 +227,9 @@ export default function App() {
     setAudioStream(null);
     setIsListening(false);
     audioTransceiver.current = null;
+    setConnectionState('closed');
+    setReconnectAttempts(0);
+    setIsReconnecting(false);
   }
 
   // Grabs a new mic track and replaces the placeholder track in the transceiver
@@ -205,20 +321,29 @@ export default function App() {
         response: `Tool call ${toolCall.name} executed successfully.`,
       };
 
-      sendClientEvent({
-        type: "conversation.item.create",
-        item: {
-          type: "function_call_output",
-          call_id: output.call_id,
-          output: JSON.stringify(toolCallOutput),
-        },
-      });
+      try {
+        // Send tool call output
+        sendClientEvent({
+          type: "conversation.item.create",
+          item: {
+            type: "function_call_output",
+            call_id: output.call_id,
+            output: JSON.stringify(toolCallOutput),
+          },
+        });
 
-      // CRITICAL FIX: Trigger response generation after tool call
-      // This ensures the LLM continues speaking after displaying content
-      sendClientEvent({
-        type: "response.create",
-      });
+        // Wait a moment before triggering response
+        setTimeout(() => {
+          // CRITICAL FIX: Trigger response generation after tool call
+          // This ensures the LLM continues speaking after displaying content
+          sendClientEvent({
+            type: "response.create",
+          });
+          console.log("Response generation triggered after tool call");
+        }, 100);
+      } catch (error) {
+        console.error("Error handling tool call:", error);
+      }
     }
 
     if (dataChannel) {
@@ -234,24 +359,62 @@ export default function App() {
         }
       });
 
+      // Handle data channel errors
+      dataChannel.addEventListener("error", (error) => {
+        console.error("Data channel error:", error);
+      });
+
+      dataChannel.addEventListener("close", () => {
+        console.log("Data channel closed");
+        setIsSessionActive(false);
+      });
+
       // Set session active when the data channel is opened
       dataChannel.addEventListener("open", () => {
+        console.log("Data channel opened successfully");
         setIsSessionActive(true);
         setIsListening(true);
         setLogs([]);
-        // Send session config
-        const sessionUpdate = {
-          type: "session.update",
-          session: {
-            tools: TOOLS,
-            instructions: INSTRUCTIONS,
-          },
-        };
-        sendClientEvent(sessionUpdate);
-        console.log("Session update sent:", sessionUpdate);
+        
+        // Send session config with better error handling
+        try {
+          const sessionUpdate = {
+            type: "session.update",
+            session: {
+              tools: TOOLS,
+              instructions: INSTRUCTIONS,
+              voice: "coral",
+              turn_detection: {
+                type: "server_vad",
+                threshold: 0.5,
+                prefix_padding_ms: 300,
+                silence_duration_ms: 200
+              },
+              input_audio_format: "pcm16",
+              output_audio_format: "pcm16",
+              input_audio_transcription: {
+                model: "whisper-1"
+              }
+            },
+          };
+          sendClientEvent(sessionUpdate);
+          console.log("Session update sent:", sessionUpdate);
+        } catch (error) {
+          console.error("Failed to send session update:", error);
+        }
       });
     }
   }, [dataChannel, sendClientEvent]);
+
+  // Cleanup effect
+  useEffect(() => {
+    return () => {
+      if (reconnectTimeout.current) {
+        clearTimeout(reconnectTimeout.current);
+      }
+      stopSession();
+    };
+  }, []);
 
   const handleConnectClick = async () => {
     if (isSessionActive) {
@@ -283,6 +446,8 @@ export default function App() {
         handleMicToggleClick={handleMicToggleClick}
         isConnected={isSessionActive}
         isListening={isListening}
+        connectionState={connectionState}
+        isReconnecting={isReconnecting}
       />
       <Logs messages={logs} />
     </div>
