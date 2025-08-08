@@ -223,10 +223,10 @@ const Whiteboard: React.FC<WhiteboardProps> = ({ toolCall }) => {
   };
 
   const renderNavigationControls = () => {
-    if (slides.length <= 1) return null;
+    const isHidden = slides.length === 0;
 
     return (
-      <div className="flex items-center justify-center space-x-2 bg-white rounded-lg shadow-md p-3 border mb-4">
+      <div className={`flex items-center justify-center space-x-2 bg-white rounded-lg shadow-md p-3 border mb-4 ${isHidden ? 'invisible' : ''}`}>
         <button
           onClick={handlePreviousSlide}
           disabled={currentSlideIndex <= 0}
@@ -333,7 +333,7 @@ const Whiteboard: React.FC<WhiteboardProps> = ({ toolCall }) => {
   return (
     <div className="size-full bg-gray-50 flex flex-col items-center justify-center p-8">
       {renderNavigationControls()}
-      <div className="w-[800px] h-[600px] bg-white border-2 border-gray-200 rounded-lg shadow-lg">
+      <div className="w-[800px] h-[450px] bg-white border-2 border-gray-200 rounded-lg shadow-lg">
         {renderContent()}
       </div>
     </div>

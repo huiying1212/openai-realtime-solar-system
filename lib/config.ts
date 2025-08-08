@@ -13,6 +13,15 @@ const toolsDefinition = [
           type: "string", 
           description: "The main text content to display, can include markdown formatting",
         },
+        highlightedText: {
+          type: "string",
+          description: "Optional single phrase to highlight within the content",
+        },
+        highlightedTerms: {
+          type: "array",
+          description: "Optional multiple terms/phrases to highlight within the content",
+          items: { type: "string" }
+        },
         type: {
           type: "string",
           enum: ["text", "chart", "diagram", "list"],
