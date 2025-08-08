@@ -18,6 +18,7 @@ import {
   PointElement,
   LineElement,
 } from "chart.js";
+import "highlight.js/styles/github.css";
 
 // Register Chart.js components
 ChartJS.register(
@@ -51,7 +52,6 @@ interface WhiteboardContent {
   };
   items?: string[];
   highlightedText?: string;
-  highlightedTerms?: string[];
   timestamp?: number; // Add timestamp to track when slide was created
 }
 
@@ -90,7 +90,6 @@ const Whiteboard: React.FC<WhiteboardProps> = ({ toolCall }) => {
           type: args.type || "text",
           chart: args.chart,
           items: args.items,
-          highlightedTerms: args.highlightedTerms || (args.highlightedText ? [args.highlightedText] : undefined),
           timestamp: Date.now(),
         };
         
@@ -278,8 +277,41 @@ const Whiteboard: React.FC<WhiteboardProps> = ({ toolCall }) => {
           <button 
             onClick={() => {
               const testContent: WhiteboardContent = {
-                title: "测试内容",
-                content: "这是一个测试内容，用于验证白板功能是否正常工作。",
+                title: "# 智能白板功能演示",
+                content: `## 欢迎使用增强版智能白板！
+
+**重要提示：** 此版本支持 Markdown 格式和自动高亮功能。
+
+### 主要特性
+
+1. **Markdown 支持**
+   - 支持标题、列表、代码块
+   - 支持 *斜体* 和 **粗体** 文本
+   - 支持 \`内联代码\` 和代码块
+
+2. **自动高亮**
+   - 重要关键词会自动高亮显示
+   - 支持中英文关键词识别
+
+### 代码示例
+
+\`\`\`javascript
+function highlightText(text) {
+  return text.replace(/important/gi, '<mark>$&</mark>');
+}
+\`\`\`
+
+### 表格支持
+
+| 功能 | 状态 | 描述 |
+|------|------|------|
+| Markdown | ✅ | 完全支持 |
+| 高亮 | ✅ | 自动识别 |
+| 图表 | ✅ | Chart.js |
+
+> **注意：** 这是一个引用块，用于重要信息提示。
+
+**总结：** 新版本白板提供了更好的内容展示效果和更清晰的格式化支持。`,
                 type: "text",
                 timestamp: Date.now(),
               };
@@ -288,77 +320,143 @@ const Whiteboard: React.FC<WhiteboardProps> = ({ toolCall }) => {
             }}
             className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm"
           >
-            测试白板功能
+            测试增强版白板功能
           </button>
         </div>
       );
     }
 
-    const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-
-    const STOP_WORDS = new Set([
-      "the","and","for","with","that","this","from","into","about","your","have","will","would","there","their","been","also","were","them","they","when","what","which","where","while","such","than","then","over","more","some","here","just","very","much","many","like","only","into","onto","each","most","next","once"
-    ]);
-
-    const getAutoTermsFromTitle = (title: string | undefined): string[] => {
-      if (!title) return [];
-      const words = title
-        .toLowerCase()
-        .replace(/[^a-z0-9\s]/gi, " ")
-        .split(/\s+/)
-        .filter((w) => w.length >= 4 && !STOP_WORDS.has(w));
-      const unique = Array.from(new Set(words));
-      return unique.slice(0, 3);
-    };
-
-    const getTermsToHighlight = (): string[] => {
-      const fromSlide = content?.highlightedTerms || [];
-      const fromToolState = highlightedText ? [highlightedText] : [];
-      const terms = [...fromSlide, ...fromToolState]
-        .map((t) => (t || "").trim())
-        .filter((t) => t.length > 0);
-      const deduped = Array.from(new Set(terms));
-      if (deduped.length > 0) return deduped;
-      return getAutoTermsFromTitle(content?.title);
-    };
-
-    const highlightString = (text: string): React.ReactNode => {
-      const terms = getTermsToHighlight();
-      if (terms.length === 0) return text;
-
-      const pattern = new RegExp(`(${terms.map(escapeRegExp).join("|")})`, "gi");
-      const parts = text.split(pattern);
-      return parts.map((part, index) => {
-        const isMatch = terms.some((t) => t.toLowerCase() === part.toLowerCase());
-        if (!isMatch) return part;
-        return (
-          <mark key={index} className="bg-yellow-200 ring-1 ring-yellow-300/60 px-1 rounded">
-            {part}
-          </mark>
+    // Enhanced highlighting function for better automatic highlighting
+    const enhanceTextWithHighlights = (text: string) => {
+      if (!text) return text;
+      
+      // If there's a specific highlighted text, use that
+      if (highlightedText) {
+        const parts = text.split(new RegExp(`(${highlightedText})`, 'gi'));
+        return parts.map((part, index) => 
+          part.toLowerCase() === highlightedText.toLowerCase() ? 
+            <mark key={index} className="bg-yellow-300 px-1 rounded">{part}</mark> : 
+            part
         );
+      }
+
+      // Auto-highlight common patterns
+      let processedText = text;
+      
+      // Highlight important keywords and patterns
+      const patterns = [
+        { regex: /\b(重要|Important|关键|Key|核心|Core|注意|Note|提示|Tip)\b/gi, className: "bg-orange-200 text-orange-800 px-1 rounded font-medium" },
+        { regex: /\b(总结|Summary|结论|Conclusion|要点|Main Points)\b/gi, className: "bg-blue-200 text-blue-800 px-1 rounded font-medium" },
+        { regex: /\b(步骤|Steps|方法|Method|流程|Process|过程|Procedure)\b/gi, className: "bg-green-200 text-green-800 px-1 rounded font-medium" },
+        { regex: /\b(公式|Formula|计算|Calculation|算法|Algorithm)\b/gi, className: "bg-purple-200 text-purple-800 px-1 rounded font-medium" },
+        { regex: /\b(问题|Problem|困难|Difficulty|挑战|Challenge|错误|Error)\b/gi, className: "bg-red-200 text-red-800 px-1 rounded font-medium" },
+        { regex: /\b(解决方案|Solution|答案|Answer|结果|Result)\b/gi, className: "bg-teal-200 text-teal-800 px-1 rounded font-medium" },
+      ];
+
+      // Apply highlights for specific patterns
+      const highlightedParts = [];
+      let lastIndex = 0;
+      
+      patterns.forEach(pattern => {
+        const matches = [...text.matchAll(pattern.regex)];
+        matches.forEach(match => {
+          if (match.index !== undefined) {
+            // Add text before match
+            if (match.index > lastIndex) {
+              highlightedParts.push({
+                text: text.slice(lastIndex, match.index),
+                isHighlight: false,
+                className: ""
+              });
+            }
+            
+            // Add highlighted match
+            highlightedParts.push({
+              text: match[0],
+              isHighlight: true,
+              className: pattern.className
+            });
+            
+            lastIndex = match.index + match[0].length;
+          }
+        });
       });
+      
+      // Add remaining text
+      if (lastIndex < text.length) {
+        highlightedParts.push({
+          text: text.slice(lastIndex),
+          isHighlight: false,
+          className: ""
+        });
+      }
+      
+      // If no patterns matched, return original text
+      if (highlightedParts.length === 0) {
+        return text;
+      }
+      
+      // Merge overlapping or adjacent highlights
+      const mergedParts: (string | React.ReactElement)[] = [];
+      highlightedParts.sort((a, b) => text.indexOf(a.text) - text.indexOf(b.text));
+      
+      highlightedParts.forEach((part, index) => {
+        if (part.isHighlight) {
+          mergedParts.push(
+            <span key={`highlight-${index}`} className={part.className}>
+              {part.text}
+            </span>
+          );
+        } else {
+          mergedParts.push(part.text);
+        }
+      });
+      
+      return mergedParts.length > 1 ? mergedParts : text;
     };
 
-    const highlightNodesDeep = (nodes: React.ReactNode): React.ReactNode => {
-      return React.Children.map(nodes, (child) => {
-        if (typeof child === "string") return highlightString(child);
-        if (typeof child === "number" || child == null || child === false || child === true) return child as any;
-        if (React.isValidElement(child)) {
-          const elementType = child.type as any;
-          if (elementType === "code" || elementType === "pre") return child;
-          const childProps: any = (child as React.ReactElement<any>).props || {};
-          const newChildren = highlightNodesDeep(childProps.children as React.ReactNode);
-          return React.cloneElement(child as React.ReactElement<any>, childProps, newChildren);
-        }
-        return child as any;
-      });
+    // Detect if content is markdown
+    const isMarkdownContent = (text: string) => {
+      const markdownPatterns = [
+        /#{1,6}\s+/,           // Headers
+        /\*\*.*\*\*/,          // Bold
+        /\*.*\*/,              // Italic
+        /```[\s\S]*?```/,      // Code blocks
+        /`[^`]+`/,             // Inline code
+        /\[.*\]\(.*\)/,        // Links
+        /^\s*[-*+]\s+/m,       // Unordered lists
+        /^\s*\d+\.\s+/m,       // Ordered lists
+        /^\s*>\s+/m,           // Blockquotes
+        /\|.*\|/,              // Tables
+      ];
+      
+      return markdownPatterns.some(pattern => pattern.test(text));
     };
 
     return (
       <div className="p-6 h-full overflow-auto">
-        <h1 className="text-3xl font-bold mb-6 text-gray-800 border-b-2 border-blue-500 pb-2">
-          {highlightString(content.title)}
-        </h1>
+        {/* Enhanced title rendering with markdown support */}
+        <div className="mb-6 border-b-2 border-blue-500 pb-2">
+          {isMarkdownContent(content.title) ? (
+            <div className="prose prose-lg max-w-none">
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                rehypePlugins={[rehypeHighlight, rehypeRaw]}
+                components={{
+                  h1: ({node, ...props}) => <h1 className="text-3xl font-bold text-gray-800 m-0" {...props} />,
+                  h2: ({node, ...props}) => <h2 className="text-2xl font-bold text-gray-800 m-0" {...props} />,
+                  h3: ({node, ...props}) => <h3 className="text-xl font-bold text-gray-800 m-0" {...props} />,
+                }}
+              >
+                {content.title}
+              </ReactMarkdown>
+            </div>
+          ) : (
+            <h1 className="text-3xl font-bold text-gray-800">
+              {enhanceTextWithHighlights(content.title)}
+            </h1>
+          )}
+        </div>
 
         {content.type === "chart" && content.chart && (
           <div className="mb-6 bg-white p-4 rounded-lg shadow-sm border max-w-2xl">
@@ -371,34 +469,84 @@ const Whiteboard: React.FC<WhiteboardProps> = ({ toolCall }) => {
             <ul className="list-disc list-inside space-y-2 text-lg">
               {content.items.map((item, index) => (
                 <li key={index} className="text-gray-700">
-                  {highlightString(item)}
+                  {isMarkdownContent(item) ? (
+                    <span className="prose max-w-none inline">
+                      <ReactMarkdown
+                        remarkPlugins={[remarkGfm]}
+                        rehypePlugins={[rehypeHighlight, rehypeRaw]}
+                        components={{
+                          p: ({node, ...props}) => <span {...props} />,
+                        }}
+                      >
+                        {item}
+                      </ReactMarkdown>
+                    </span>
+                  ) : (
+                    enhanceTextWithHighlights(item)
+                  )}
                 </li>
               ))}
             </ul>
           </div>
         )}
 
-        <div className="prose prose-slate max-w-none text-lg leading-relaxed text-gray-700">
-          <ReactMarkdown
-            remarkPlugins={[remarkGfm]}
-            rehypePlugins={[rehypeRaw, rehypeHighlight]}
-            skipHtml={false}
-            components={{
-              p: ({ children }) => <p>{highlightNodesDeep(children)}</p>,
-              li: ({ children }) => <li>{highlightNodesDeep(children)}</li>,
-              h1: ({ children }) => <h1>{highlightNodesDeep(children)}</h1>,
-              h2: ({ children }) => <h2>{highlightNodesDeep(children)}</h2>,
-              h3: ({ children }) => <h3>{highlightNodesDeep(children)}</h3>,
-              h4: ({ children }) => <h4>{highlightNodesDeep(children)}</h4>,
-              h5: ({ children }) => <h5>{highlightNodesDeep(children)}</h5>,
-              h6: ({ children }) => <h6>{highlightNodesDeep(children)}</h6>,
-              blockquote: ({ children }) => <blockquote>{highlightNodesDeep(children)}</blockquote>,
-              td: ({ children }) => <td>{highlightNodesDeep(children)}</td>,
-              th: ({ children }) => <th>{highlightNodesDeep(children)}</th>,
-            }}
-          >
-            {content.content}
-          </ReactMarkdown>
+        {/* Enhanced content rendering with markdown support */}
+        <div className="text-lg leading-relaxed text-gray-700">
+          {isMarkdownContent(content.content) ? (
+            <div className="prose prose-lg max-w-none">
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                rehypePlugins={[rehypeHighlight, rehypeRaw]}
+                components={{
+                // Custom components for better styling
+                h1: ({node, ...props}) => <h1 className="text-2xl font-bold text-gray-800 mt-6 mb-4 border-b border-gray-300 pb-2" {...props} />,
+                h2: ({node, ...props}) => <h2 className="text-xl font-semibold text-gray-800 mt-5 mb-3" {...props} />,
+                h3: ({node, ...props}) => <h3 className="text-lg font-semibold text-gray-800 mt-4 mb-2" {...props} />,
+                p: ({node, ...props}) => <p className="mb-4 leading-relaxed" {...props} />,
+                ul: ({node, ...props}) => <ul className="list-disc list-inside mb-4 space-y-1 ml-4" {...props} />,
+                ol: ({node, ...props}) => <ol className="list-decimal list-inside mb-4 space-y-1 ml-4" {...props} />,
+                li: ({node, ...props}) => <li className="leading-relaxed" {...props} />,
+                blockquote: ({node, ...props}) => (
+                  <blockquote className="border-l-4 border-blue-500 pl-4 py-2 bg-blue-50 italic text-gray-700 mb-4" {...props} />
+                ),
+                code: ({node, ...props}) => {
+                  const { children, className } = props;
+                  const isInline = !className || !className.includes('language-');
+                  return isInline ? (
+                    <code className="bg-gray-100 text-red-600 px-1 py-0.5 rounded text-sm font-mono" {...props} />
+                  ) : (
+                    <code className="block bg-gray-100 p-3 rounded text-sm font-mono overflow-x-auto" {...props} />
+                  );
+                },
+                pre: ({node, ...props}) => (
+                  <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto mb-4" {...props} />
+                ),
+                table: ({node, ...props}) => (
+                  <div className="overflow-x-auto mb-4">
+                    <table className="min-w-full border-collapse border border-gray-300" {...props} />
+                  </div>
+                ),
+                th: ({node, ...props}) => (
+                  <th className="border border-gray-300 bg-gray-100 px-4 py-2 text-left font-semibold" {...props} />
+                ),
+                td: ({node, ...props}) => (
+                  <td className="border border-gray-300 px-4 py-2" {...props} />
+                ),
+                a: ({node, ...props}) => (
+                  <a className="text-blue-600 hover:text-blue-800 underline" target="_blank" rel="noopener noreferrer" {...props} />
+                ),
+                strong: ({node, ...props}) => <strong className="font-bold text-gray-900" {...props} />,
+                em: ({node, ...props}) => <em className="italic" {...props} />,
+                }}
+              >
+                {content.content}
+              </ReactMarkdown>
+            </div>
+          ) : (
+            <div className="whitespace-pre-wrap">
+              {enhanceTextWithHighlights(content.content)}
+            </div>
+          )}
         </div>
       </div>
     );
