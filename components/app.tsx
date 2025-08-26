@@ -436,6 +436,36 @@ export default function App() {
     }
   };
 
+  // Send a text message to the model
+  const handleSendText = useCallback((text: string) => {
+    if (!isSessionActive || !dataChannel) {
+      console.error("Cannot send text: session not active or no data channel");
+      return;
+    }
+
+    // Send text message as conversation item
+    sendClientEvent({
+      type: "conversation.item.create",
+      item: {
+        type: "message",
+        role: "user",
+        content: [
+          {
+            type: "input_text",
+            text: text
+          }
+        ]
+      }
+    });
+
+    // Trigger response generation
+    sendClientEvent({
+      type: "response.create"
+    });
+
+    console.log("Text message sent:", text);
+  }, [isSessionActive, dataChannel, sendClientEvent]);
+
   return (
     <div className="relative size-full bg-gray-50">
       <div className="h-full">
@@ -444,6 +474,7 @@ export default function App() {
       <Controls
         handleConnectClick={handleConnectClick}
         handleMicToggleClick={handleMicToggleClick}
+        handleSendText={handleSendText}
         isConnected={isSessionActive}
         isListening={isListening}
         connectionState={connectionState}
