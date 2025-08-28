@@ -45,14 +45,19 @@ interface WhiteboardProps {
 interface WhiteboardContent {
   title: string;
   content: string;
-  type: "text" | "chart" | "diagram" | "list";
+  type: "text" | "chart" | "diagram" | "list" | "images";
   chart?: {
     chartType: "bar" | "pie" | "line";
-    data: Array<{ label: string; value: number }>;
+    data: { label: string; value: number }[];
   };
   items?: string[];
-  highlightedText?: string;
-  timestamp?: number; // Add timestamp to track when slide was created
+  images?: {
+    url: string;
+    description: string;
+    chapter: string;
+  }[];
+  timestamp: number;
+ // Add timestamp to track when slide was created
 }
 
 const Whiteboard: React.FC<WhiteboardProps> = ({ toolCall }) => {
@@ -90,15 +95,12 @@ const Whiteboard: React.FC<WhiteboardProps> = ({ toolCall }) => {
           type: args.type || "text",
           chart: args.chart,
           items: args.items,
+          images: args.images,
           timestamp: Date.now(),
         };
         
-        // Add new slide to history and set as current
-        setSlides(prevSlides => {
-          const newSlides = [...prevSlides, newContent];
-          setCurrentSlideIndex(newSlides.length - 1); // Set to the index of the new slide
-          return newSlides;
-        });
+        // Add new slide to history
+        setSlides(prevSlides => [...prevSlides, newContent]);
         break;
 
       case "clear_whiteboard":
@@ -118,6 +120,13 @@ const Whiteboard: React.FC<WhiteboardProps> = ({ toolCall }) => {
         break;
     }
   }, [toolCall]);
+
+  // Auto-navigate to the latest slide when new content is added
+  useEffect(() => {
+    if (slides.length > 0) {
+      setCurrentSlideIndex(slides.length - 1);
+    }
+  }, [slides.length]);
 
   // Add keyboard navigation
   useEffect(() => {
@@ -269,229 +278,195 @@ const Whiteboard: React.FC<WhiteboardProps> = ({ toolCall }) => {
     );
   };
 
+  // Enhanced highlighting function for better automatic highlighting
+  const enhanceTextWithHighlights = (text: string) => {
+    if (!text) return text;
+    
+    // If there's a specific highlighted text, use that
+    if (highlightedText) {
+      const parts = text.split(new RegExp(`(${highlightedText})`, 'gi'));
+      return parts.map((part, index) => 
+        part.toLowerCase() === highlightedText.toLowerCase() ? 
+          <mark key={index} className="bg-yellow-300 px-1 rounded">{part}</mark> : 
+          part
+      );
+    }
+
+    return text;
+  };
+
+  // Detect if content is markdown
+  const isMarkdownContent = (text: string) => {
+    const markdownPatterns = [
+      /#{1,6}\s+/,           // Headers
+      /\*\*.*\*\*/,          // Bold
+      /\*.*\*/,              // Italic
+      /```[\s\S]*?```/,      // Code blocks
+      /`[^`]+`/,             // Inline code
+      /\[.*\]\(.*\)/,        // Links
+      /^\s*[-*+]\s+/m,       // Unordered lists
+      /^\s*\d+\.\s+/m,       // Ordered lists
+      /^\s*>\s+/m,           // Blockquotes
+      /\|.*\|/,              // Tables
+    ];
+    
+    return markdownPatterns.some(pattern => pattern.test(text));
+  };
+
+  const renderImages = (images: any[]) => {
+    if (!images || images.length === 0) return null;
+    
+    return (
+      <div className="mt-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {images.map((image, index) => (
+            <div key={index} className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
+              <div className="aspect-video bg-gray-100 rounded mb-2 overflow-hidden">
+                <img 
+                  src={image.url} 
+                  alt={image.description}
+                  className="w-full h-full object-contain"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = 'none';
+                    const parent = (e.target as HTMLElement).parentElement;
+                    if (parent) {
+                      parent.innerHTML = '<div class="w-full h-full flex items-center justify-center text-gray-400"><div class="text-center"><div class="text-2xl mb-2">🖼️</div><div class="text-sm">图片加载失败</div></div></div>';
+                    }
+                  }}
+                />
+              </div>
+              <div className="text-sm">
+                <div className="font-medium text-gray-800 mb-1 line-clamp-2">
+                  {image.description}
+                </div>
+                <div className="text-gray-500 text-xs">
+                  来源：{image.chapter}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
   const renderContent = () => {
     if (!content) {
       return (
-        <div className="flex flex-col items-center justify-center h-full text-gray-400 text-xl">
-          <div className="mb-4">智能白板 - 等待内容展示</div>
-          <button 
-            onClick={() => {
-              const testContent: WhiteboardContent = {
-                title: "# 智能白板功能演示",
-                content: `## 欢迎使用增强版智能白板！
-
-**重要提示：** 此版本支持 Markdown 格式和自动高亮功能。
-
-### 主要特性
-
-1. **Markdown 支持**
-   - 支持标题、列表、代码块
-   - 支持 *斜体* 和 **粗体** 文本
-   - 支持 \`内联代码\` 和代码块
-
-2. **自动高亮**
-   - 重要关键词会自动高亮显示
-   - 支持中英文关键词识别
-
-### 代码示例
-
-\`\`\`javascript
-function highlightText(text) {
-  return text.replace(/important/gi, '<mark>$&</mark>');
-}
-\`\`\`
-
-### 表格支持
-
-| 功能 | 状态 | 描述 |
-|------|------|------|
-| Markdown | ✅ | 完全支持 |
-| 高亮 | ✅ | 自动识别 |
-| 图表 | ✅ | Chart.js |
-
-> **注意：** 这是一个引用块，用于重要信息提示。
-
-**总结：** 新版本白板提供了更好的内容展示效果和更清晰的格式化支持。`,
-                type: "text",
-                timestamp: Date.now(),
-              };
-              setSlides([testContent]);
-              setCurrentSlideIndex(0);
-            }}
-            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm"
-          >
-            测试增强版白板功能
-          </button>
+        <div className="size-full flex items-center justify-center text-gray-400">
+          <div className="text-center">
+            <div className="text-6xl mb-4">📋</div>
+            <div className="text-xl">白板准备就绪</div>
+            <div className="text-sm mt-2">等待内容显示...</div>
+          </div>
         </div>
       );
     }
 
-    // Enhanced highlighting function for better automatic highlighting
-    const enhanceTextWithHighlights = (text: string) => {
-      if (!text) return text;
-      
-      // If there's a specific highlighted text, use that
-      if (highlightedText) {
-        const parts = text.split(new RegExp(`(${highlightedText})`, 'gi'));
-        return parts.map((part, index) => 
-          part.toLowerCase() === highlightedText.toLowerCase() ? 
-            <mark key={index} className="bg-yellow-300 px-1 rounded">{part}</mark> : 
-            part
-        );
-      }
-
-      // Auto-highlight common patterns
-      let processedText = text;
-      
-      // Highlight important keywords and patterns
-      const patterns = [
-        { regex: /\b(重要|Important|关键|Key|核心|Core|注意|Note|提示|Tip)\b/gi, className: "bg-orange-200 text-orange-800 px-1 rounded font-medium" },
-        { regex: /\b(总结|Summary|结论|Conclusion|要点|Main Points)\b/gi, className: "bg-blue-200 text-blue-800 px-1 rounded font-medium" },
-        { regex: /\b(步骤|Steps|方法|Method|流程|Process|过程|Procedure)\b/gi, className: "bg-green-200 text-green-800 px-1 rounded font-medium" },
-        { regex: /\b(公式|Formula|计算|Calculation|算法|Algorithm)\b/gi, className: "bg-purple-200 text-purple-800 px-1 rounded font-medium" },
-        { regex: /\b(问题|Problem|困难|Difficulty|挑战|Challenge|错误|Error)\b/gi, className: "bg-red-200 text-red-800 px-1 rounded font-medium" },
-        { regex: /\b(解决方案|Solution|答案|Answer|结果|Result)\b/gi, className: "bg-teal-200 text-teal-800 px-1 rounded font-medium" },
-      ];
-
-      // Apply highlights for specific patterns
-      const highlightedParts = [];
-      let lastIndex = 0;
-      
-      patterns.forEach(pattern => {
-        const matches = [...text.matchAll(pattern.regex)];
-        matches.forEach(match => {
-          if (match.index !== undefined) {
-            // Add text before match
-            if (match.index > lastIndex) {
-              highlightedParts.push({
-                text: text.slice(lastIndex, match.index),
-                isHighlight: false,
-                className: ""
-              });
-            }
-            
-            // Add highlighted match
-            highlightedParts.push({
-              text: match[0],
-              isHighlight: true,
-              className: pattern.className
-            });
-            
-            lastIndex = match.index + match[0].length;
-          }
-        });
-      });
-      
-      // Add remaining text
-      if (lastIndex < text.length) {
-        highlightedParts.push({
-          text: text.slice(lastIndex),
-          isHighlight: false,
-          className: ""
-        });
-      }
-      
-      // If no patterns matched, return original text
-      if (highlightedParts.length === 0) {
-        return text;
-      }
-      
-      // Merge overlapping or adjacent highlights
-      const mergedParts: (string | React.ReactElement)[] = [];
-      highlightedParts.sort((a, b) => text.indexOf(a.text) - text.indexOf(b.text));
-      
-      highlightedParts.forEach((part, index) => {
-        if (part.isHighlight) {
-          mergedParts.push(
-            <span key={`highlight-${index}`} className={part.className}>
-              {part.text}
-            </span>
-          );
-        } else {
-          mergedParts.push(part.text);
-        }
-      });
-      
-      return mergedParts.length > 1 ? mergedParts : text;
-    };
-
-    // Detect if content is markdown
-    const isMarkdownContent = (text: string) => {
-      const markdownPatterns = [
-        /#{1,6}\s+/,           // Headers
-        /\*\*.*\*\*/,          // Bold
-        /\*.*\*/,              // Italic
-        /```[\s\S]*?```/,      // Code blocks
-        /`[^`]+`/,             // Inline code
-        /\[.*\]\(.*\)/,        // Links
-        /^\s*[-*+]\s+/m,       // Unordered lists
-        /^\s*\d+\.\s+/m,       // Ordered lists
-        /^\s*>\s+/m,           // Blockquotes
-        /\|.*\|/,              // Tables
-      ];
-      
-      return markdownPatterns.some(pattern => pattern.test(text));
-    };
-
-    return (
-      <div className="p-6 h-full overflow-auto">
-        {/* Enhanced title rendering with markdown support */}
-        <div className="mb-6 border-b-2 border-blue-500 pb-2">
-          {isMarkdownContent(content.title) ? (
-            <div className="prose prose-lg max-w-none">
-              <ReactMarkdown
-                remarkPlugins={[remarkGfm]}
-                rehypePlugins={[rehypeHighlight, rehypeRaw]}
-                components={{
-                  h1: ({node, ...props}) => <h1 className="text-3xl font-bold text-gray-800 m-0" {...props} />,
-                  h2: ({node, ...props}) => <h2 className="text-2xl font-bold text-gray-800 m-0" {...props} />,
-                  h3: ({node, ...props}) => <h3 className="text-xl font-bold text-gray-800 m-0" {...props} />,
-                }}
-              >
-                {content.title}
-              </ReactMarkdown>
-            </div>
-          ) : (
-            <h1 className="text-3xl font-bold text-gray-800">
-              {enhanceTextWithHighlights(content.title)}
-            </h1>
-          )}
+    if (content.type === "images") {
+      return (
+        <div className="size-full p-6 overflow-y-auto">
+          <div className="mb-4">
+            <h2 className="text-2xl font-bold text-gray-800">{content.title}</h2>
+            {content.content && (
+              <div className="mt-3 text-gray-600 leading-relaxed">
+                {content.content}
+              </div>
+            )}
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {content.images?.map((image, index) => (
+              <div key={index} className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
+                <div className="aspect-video bg-gray-100 rounded mb-2 overflow-hidden">
+                  <img 
+                    src={image.url} 
+                    alt={image.description}
+                    className="w-full h-full object-contain"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = 'none';
+                      const parent = (e.target as HTMLElement).parentElement;
+                      if (parent) {
+                        parent.innerHTML = '<div class="w-full h-full flex items-center justify-center text-gray-400"><div class="text-center"><div class="text-2xl mb-2">🖼️</div><div class="text-sm">图片加载失败</div></div></div>';
+                      }
+                    }}
+                  />
+                </div>
+                <div className="text-sm">
+                  <div className="font-medium text-gray-800 mb-1 line-clamp-2">
+                    {image.description}
+                  </div>
+                  <div className="text-gray-500 text-xs">
+                    来源：{image.chapter}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
+      );
+    }
 
-        {content.type === "chart" && content.chart && (
-          <div className="mb-6 bg-white p-4 rounded-lg shadow-sm border max-w-2xl">
+    if (content.type === "chart") {
+      return (
+        <div className="size-full p-6 overflow-y-auto">
+          <div className="mb-4">
+            <h2 className="text-2xl font-bold text-gray-800">{content.title}</h2>
+            {content.content && (
+              <div className="mt-3 text-gray-600 leading-relaxed">
+                {content.content}
+              </div>
+            )}
+          </div>
+          <div className="mb-6">
             {renderChart(content.chart)}
           </div>
-        )}
+          {renderImages(content.images || [])}
+        </div>
+      );
+    }
 
-        {content.type === "list" && content.items && (
+    if (content.type === "list") {
+      return (
+        <div className="size-full p-8 overflow-y-auto">
           <div className="mb-6">
-            <ul className="list-disc list-inside space-y-2 text-lg">
-              {content.items.map((item, index) => (
-                <li key={index} className="text-gray-700">
-                  {isMarkdownContent(item) ? (
-                    <span className="prose max-w-none inline">
-                      <ReactMarkdown
-                        remarkPlugins={[remarkGfm]}
-                        rehypePlugins={[rehypeHighlight, rehypeRaw]}
-                        components={{
-                          p: ({node, ...props}) => <span {...props} />,
-                        }}
-                      >
-                        {item}
-                      </ReactMarkdown>
-                    </span>
-                  ) : (
-                    enhanceTextWithHighlights(item)
-                  )}
-                </li>
-              ))}
-            </ul>
+            <h2 className="text-3xl font-bold text-gray-800">{content.title}</h2>
+            {content.content && (
+              <div className="mt-3 text-gray-600 leading-relaxed">
+                {content.content}
+              </div>
+            )}
           </div>
-        )}
+          <div className="space-y-4 mb-6">
+            {content.items?.map((item, index) => {
+              const isHighlighted = highlightedText && item.toLowerCase().includes(highlightedText.toLowerCase());
+              return (
+                <div
+                  key={index}
+                  className={`flex items-start space-x-3 p-3 rounded-lg transition-all duration-300 ${
+                    isHighlighted ? 'bg-yellow-100 border-l-4 border-yellow-500' : 'hover:bg-gray-50'
+                  }`}
+                >
+                  <div className="flex-shrink-0 w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center font-bold text-sm">
+                    {index + 1}
+                  </div>
+                  <div className="text-lg leading-relaxed text-gray-700 flex-1">
+                    {enhanceTextWithHighlights(item)}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          {renderImages(content.images || [])}
+        </div>
+      );
+    }
 
-        {/* Enhanced content rendering with markdown support */}
-        <div className="text-lg leading-relaxed text-gray-700">
+    return (
+      <div className="size-full p-8 overflow-y-auto">
+        <div className="mb-6">
+          <h2 className="text-3xl font-bold text-gray-800">{content.title}</h2>
+        </div>
+        <div className="text-lg leading-relaxed text-gray-700 mb-6">
           {isMarkdownContent(content.content) ? (
             <div className="prose prose-lg max-w-none">
               <ReactMarkdown
@@ -548,6 +523,7 @@ function highlightText(text) {
             </div>
           )}
         </div>
+        {renderImages(content.images || [])}
       </div>
     );
   };

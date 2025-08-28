@@ -1,4 +1,4 @@
-import { VOICE } from "@/lib/config";
+import { VOICE, TOOLS, INSTRUCTIONS } from "@/lib/config";
 import { MODEL } from "@/lib/constants";
 
 // Get an ephemeral session token from the /realtime/sessions endpoint
@@ -20,7 +20,8 @@ export async function GET() {
         model: MODEL,
         voice: VOICE,
         modalities: ["text", "audio"],
-        instructions: "You are a helpful AI assistant. Always respond in the same language as the user's input. Maintain language consistency throughout the conversation.",
+        instructions: INSTRUCTIONS,
+        tools: TOOLS,
       }),
     });
 

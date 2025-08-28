@@ -312,37 +312,116 @@ export default function App() {
         name: output.name,
         arguments: output.arguments,
       };
-      console.log("Tool call:", toolCall);
-      setToolCall(toolCall);
 
-      // TOOL CALL HANDLING
-      // Initialize toolCallOutput with a default response
-      const toolCallOutput: ToolCallOutput = {
-        response: `Tool call ${toolCall.name} executed successfully.`,
-      };
+      console.log("Handling tool call:", toolCall);
 
-      try {
-        // Send tool call output
-        sendClientEvent({
-          type: "conversation.item.create",
-          item: {
-            type: "function_call_output",
-            call_id: output.call_id,
-            output: JSON.stringify(toolCallOutput),
-          },
-        });
-
-        // Wait a moment before triggering response
-        setTimeout(() => {
-          // CRITICAL FIX: Trigger response generation after tool call
-          // This ensures the LLM continues speaking after displaying content
-          sendClientEvent({
-            type: "response.create",
+      // Handle different tool types
+      if (toolCall.name === "search_knowledge") {
+        try {
+          const args = JSON.parse(toolCall.arguments);
+          const response = await fetch('/api/knowledge/search', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              query: args.query,
+              top_k: args.top_k || 3
+            }),
           });
-          console.log("Response generation triggered after tool call");
-        }, 100);
-      } catch (error) {
-        console.error("Error handling tool call:", error);
+
+          const result = await response.json();
+          console.log("Knowledge search result:", result);
+
+          // Send the search result back to the realtime API
+          if (dataChannel && dataChannel.readyState === 'open') {
+            const toolResponse = {
+              type: "conversation.item.create",
+              item: {
+                type: "function_call_output",
+                call_id: output.call_id,
+                output: JSON.stringify({
+                  success: result.success,
+                  message: result.message || "Knowledge retrieved successfully",
+                  knowledge_found: result.knowledge.text_chunks > 0,
+                  context_text: result.knowledge.context_text,
+                  sources: result.knowledge.sources,
+                  text_chunks: result.knowledge.text_chunks || 0,
+                  related_images: result.knowledge.related_images || 0,
+                  images: result.knowledge.images || []
+                })
+              }
+            };
+            dataChannel.send(JSON.stringify(toolResponse));
+
+            // Generate response based on the tool output
+            const responseCreate = {
+              type: "response.create"
+            };
+            dataChannel.send(JSON.stringify(responseCreate));
+          }
+        } catch (error) {
+          console.error("Error in knowledge search:", error);
+          
+          // Send error response back to realtime API
+          if (dataChannel && dataChannel.readyState === 'open') {
+            const errorResponse = {
+              type: "conversation.item.create",
+              item: {
+                type: "function_call_output", 
+                call_id: output.call_id,
+                output: JSON.stringify({
+                  success: false,
+                  knowledge: { context_text: "", related_images: 0, sources: [] },
+                  message: "Knowledge search failed, proceeding without enhancement"
+                })
+              }
+            };
+            dataChannel.send(JSON.stringify(errorResponse));
+
+            const responseCreate = {
+              type: "response.create"
+            };
+            dataChannel.send(JSON.stringify(responseCreate));
+          }
+        }
+      } else {
+        // Handle other tool calls (display_content, clear_whiteboard, highlight_text, display_images)
+        setToolCall(toolCall);
+
+        // TOOL CALL HANDLING for whiteboard tools
+        // Initialize toolCallOutput with a default response
+        const toolCallOutput: ToolCallOutput = {
+          response: `Tool call ${toolCall.name} executed successfully.`,
+        };
+
+        try {
+          // Send tool call output
+          if (dataChannel && dataChannel.readyState === 'open') {
+            const toolResponse = {
+              type: "conversation.item.create",
+              item: {
+                type: "function_call_output",
+                call_id: output.call_id,
+                output: JSON.stringify(toolCallOutput),
+              },
+            };
+            dataChannel.send(JSON.stringify(toolResponse));
+
+            // Wait a moment before triggering response
+            setTimeout(() => {
+              // CRITICAL FIX: Trigger response generation after tool call
+              // This ensures the LLM continues speaking after displaying content
+              const responseCreate = {
+                type: "response.create",
+              };
+              dataChannel.send(JSON.stringify(responseCreate));
+              console.log("Response generation triggered after tool call");
+            }, 100);
+          }
+        } catch (error) {
+          console.error("Error handling tool call:", error);
+        }
       }
     }
 
